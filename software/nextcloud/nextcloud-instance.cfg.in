@@ -1,4 +1,3 @@
-
 #############
 #   Redis   #
 #############
@@ -44,10 +43,13 @@ nextcloud = ${:document-root}
 admin-user = admin
 admin-password = admin
 trusted-domain-list = 
+trusted-domain-list = 
   [${apache-php-configuration:ip}]:${apache-php-configuration:port}
+  ${request-frontend:connection-domain}
   ${slap-parameter:instance.trusted-domain-1}
   ${slap-parameter:instance.trusted-domain-2}
   ${slap-parameter:instance.trusted-domain-3}
+
 
 trusted-proxy-list = ${slap-parameter:instance.trusted-proxy-list}
 cli-url = ${slap-parameter:instance.cli-url}
@@ -210,6 +212,8 @@ command-line = ${instance-parameter:php-bin} -c ${php.ini-conf:rendered}
 admin-user = ${instance-parameter:admin-user}
 admin-password = ${instance-parameter:admin-password}
 
+
+
 [slap-parameter]
 instance.mail-from = Nextcloud
 instance.mail-domain = nextcloud@example.com
@@ -229,3 +233,55 @@ instance.trusted-domain-1 =
 instance.trusted-domain-2 =
 instance.trusted-domain-3 =
 instance.trusted-proxy-list =
+
+
+
+#####################################################
+#####################################################
+####request CDN
+#####################################################
+#####################################################
+
+# Request a CDN entry to master
+[nextcloud-frontend]
+# Extend slap-connnection to get the credentials for the request
+<= slap-connection
+# Recipe used to make requests
+recipe = slapos.cookbook:requestoptional
+name = NEXTCLOUD frontend
+# Specify the software url of the frontend software release
+software-url = http://git.erp5.org/gitweb/slapos.git/blob_plain/HEAD:/software/apache-frontend/software.cfg
+# It is not a dedicated instance but an instance allocated on a shared instance
+slave = true
+config-url = ${apache-php-configuration:url}
+config-https-only = true
+# The parameter expected to be received from the request are listed here.
+return = domain secure_access
+
+
+##########################################
+##########################################
+###
+
+
+# Add a promise to make sure the cdn is properly configured
+[nextcloud-frontend-promise]
+<= monitor-promise-base
+module = check_url_available
+name = nextcloud-http-frontend.py
+url = ${nextcloud-frontend:connection-secure_access}
+config-url = ${:url}
+config-check-secure = 1
+
+
+[publish-connection-information]
+###################################################
+###################################################
+recipe = slapos.cookbook:publish
+# By extending monitor publish, all the section deploying monitoring will
+# be deployed. The parameters needed for accessing monitoring will be published
+<= monitor-publish
+server_url = ${apache-php-configuration:url}
+# Add dependency to the promise so that frontend sections are processed
+# and there is no need to declare the new part in buildout:parts
+server-cdn-url = ${nextcloud-frontend-promise:url}
