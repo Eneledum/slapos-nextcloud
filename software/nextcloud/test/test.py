@@ -333,6 +333,8 @@ class TestNextCloudParameters(NextCloudTestCase):
         "[%s]:9988" % self._ipv6_address,
         "nextcloud.example.com",
         "nextcloud.proxy.com"
+#        "softinst151868.host.vifib.net",
+#        "softinst152020.host.vifib.net"
       ]),
       trusted_proxy_list=json.dumps([
         "2001:67c:1254:e:89::5df3",
